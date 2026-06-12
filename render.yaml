@@ -1,0 +1,10 @@
+# Configuración de deploy para Render (render.com).
+# Al crear un "Blueprint" apuntando a este repo, Render lee este archivo
+# y levanta el servidor solo, sin configurar nada a mano.
+services:
+  - type: web
+    name: terna
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT

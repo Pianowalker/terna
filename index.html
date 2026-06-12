@@ -816,6 +816,13 @@ document.getElementById('tutNext').onclick = () => {
 // ---------- Multijugador ----------
 // El servidor (server.py) es la autoridad: acá solo se dibuja lo que manda
 // y se le avisa lo que el jugador hace.
+
+// URL del servidor multijugador. Si queda vacío, se conecta al mismo dominio
+// que sirve esta página (caso local: python -m uvicorn server:app).
+// Si el front está en Netlify y el back en Render, poné acá la URL del back,
+// por ejemplo: const SERVIDOR_MP = 'wss://terna.onrender.com/ws';
+const SERVIDOR_MP = '';
+
 let mpWS = null, mpId = null, mpMode = false;
 let mpFrozenUntil = 0, mpFreezeTimer = null;
 const START_PANEL_HTML = document.getElementById('panelContent').innerHTML;
@@ -857,15 +864,16 @@ function mpOpen() {
 
 function mpConnect(nombre) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = SERVIDOR_MP || `${proto}://${location.host}/ws`;
   try {
-    mpWS = new WebSocket(`${proto}://${location.host}/ws`);
+    mpWS = new WebSocket(url);
   } catch (e) {
     toast('No se pudo conectar al servidor', 3000);
     return;
   }
   mpWS.onopen = () => mpSend({ type: 'hola', nombre });
   mpWS.onmessage = e => mpMessage(JSON.parse(e.data));
-  mpWS.onerror = () => toast('No se pudo conectar (¿está corriendo server.py?)', 4000);
+  mpWS.onerror = () => toast('No se pudo conectar. Si el servidor estaba dormido, se está despertando: probá de nuevo en ~1 minuto.', 5000);
   mpWS.onclose = () => {
     if (mpMode || !document.getElementById('mp').classList.contains('hidden')) {
       toast('Se perdió la conexión con el servidor', 3500);

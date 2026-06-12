@@ -4,14 +4,17 @@ partida completa contra el servidor real.
 
 Uso: con el servidor corriendo en el puerto 8741,
     python test_mp.py
+o contra otro servidor (por ejemplo el de producción):
+    python test_mp.py wss://terna-fslh.onrender.com/ws
 """
 import asyncio
 import itertools
 import json
+import sys
 
 import websockets
 
-URL = 'ws://127.0.0.1:8741/ws'
+URL = sys.argv[1] if len(sys.argv) > 1 else 'ws://127.0.0.1:8741/ws'
 
 
 def es_terna(a, b, c):

@@ -817,11 +817,11 @@ document.getElementById('tutNext').onclick = () => {
 // El servidor (server.py) es la autoridad: acá solo se dibuja lo que manda
 // y se le avisa lo que el jugador hace.
 
-// URL del servidor multijugador. Si queda vacío, se conecta al mismo dominio
-// que sirve esta página (caso local: python -m uvicorn server:app).
-// Si el front está en Netlify y el back en Render, poné acá la URL del back,
-// por ejemplo: const SERVIDOR_MP = 'wss://terna.onrender.com/ws';
-const SERVIDOR_MP = '';
+// URL del servidor multijugador en la nube. Se usa cuando la página NO la
+// sirve el propio servidor del juego (por ej. el front en Netlify, o el
+// archivo abierto con doble clic). En localhost o red local se ignora y se
+// conecta al servidor local, para poder seguir desarrollando.
+const SERVIDOR_MP = 'wss://terna-fslh.onrender.com/ws';
 
 let mpWS = null, mpId = null, mpMode = false;
 let mpFrozenUntil = 0, mpFreezeTimer = null;
@@ -864,7 +864,11 @@ function mpOpen() {
 
 function mpConnect(nombre) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const url = SERVIDOR_MP || `${proto}://${location.host}/ws`;
+  const h = location.hostname;
+  const esLocal = h === 'localhost' || h === '127.0.0.1'
+    || h.startsWith('192.168.') || h.startsWith('10.')
+    || h.endsWith('.onrender.com');
+  const url = (SERVIDOR_MP && !esLocal) ? SERVIDOR_MP : `${proto}://${location.host}/ws`;
   try {
     mpWS = new WebSocket(url);
   } catch (e) {

@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terna</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --card-bg: #f8fafc;
+    --text: #e2e8f0;
+    --accent: #38bdf8;
+    --good: #4ade80;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    width: 100%;
+    max-width: 900px;
+    padding: 16px 20px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  .stats {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+    min-width: 60px;
+  }
+  .stat .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: block;
+  }
+  .stat label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+  }
+  #potential { color: var(--good); }
+  button.action {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  button.action:hover { border-color: var(--accent); }
+  #table {
+    display: grid;
+    gap: 12px;
+    padding: 12px 12px 24px;
+    justify-content: center;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 3px solid transparent;
+    border-radius: 10px;
+    width: var(--card-w, 110px);
+    aspect-ratio: 2 / 3;
+    cursor: pointer;
+    padding: 0;
+    touch-action: manipulation;
+    transition: transform 0.12s, border-color 0.12s, opacity 0.3s;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  }
+  .card:hover { transform: translateY(-3px); }
+  .card.selected {
+    border-color: var(--accent);
+    transform: translateY(-5px);
+    box-shadow: 0 6px 14px rgba(56,189,248,0.35);
+  }
+  .card.good { border-color: var(--good); }
+  .card.bad  { border-color: var(--bad); animation: shake 0.3s; }
+  .card.hint { border-color: #facc15; }
+  .card svg { width: 100%; height: 100%; display: block; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel);
+    border: 1px solid #334155;
+    padding: 10px 18px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #overlay.hidden { display: none; }
+  .panel {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 36px 48px;
+    text-align: center;
+    max-width: 420px;
+  }
+  .panel h2 { color: var(--accent); margin-bottom: 16px; }
+  .panel p { margin: 8px 0; color: #cbd5e1; }
+  .panel .big {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--good);
+    margin: 12px 0;
+  }
+  .panel button:not(.tut-card) {
+    margin-top: 20px;
+    background: var(--accent);
+    color: #0f172a;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .rules {
+    font-size: 0.85rem;
+    text-align: left;
+    margin-top: 14px;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  .panel-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .panel button.action {
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 500;
+    border: 1px solid #334155;
+  }
+  #tutorial {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.96);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #tutorial.hidden { display: none; }
+  .tut-panel {
+    padding: 22px 26px;
+    width: min(540px, 94vw);
+    max-width: none;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  #tutProgress {
+    color: #64748b;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  #tutTitle { color: var(--accent); margin: 6px 0 2px; font-size: 1.25rem; }
+  .tut-text { color: #cbd5e1; font-size: 0.92rem; line-height: 1.55; margin: 10px 0; }
+  .tut-cards {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 14px 0;
+    flex-wrap: wrap;
+  }
+  .tut-cards.grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, min(25vw, 96px));
+    justify-content: center;
+  }
+  .tut-cards.grid3 .tut-card { width: 100%; }
+  .tut-card {
+    background: var(--card-bg);
+    border: 3px solid transparent;
+    border-radius: 10px;
+    width: min(27vw, 108px);
+    aspect-ratio: 2 / 3;
+    padding: 0;
+    touch-action: manipulation;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  }
+  .tut-card:not(.clickable) { pointer-events: none; }
+  .tut-card.clickable { cursor: pointer; }
+  .tut-card.selected { border-color: var(--accent); }
+  .tut-card.good { border-color: var(--good); }
+  .tut-card.bad { border-color: var(--bad); animation: shake 0.3s; }
+  .tut-card.hint { border-color: #facc15; }
+  .tut-card svg { width: 100%; height: 100%; display: block; }
+  .attr-list {
+    text-align: left;
+    display: inline-block;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    margin: 6px 0;
+  }
+  .check-table { margin: 12px auto 4px; font-size: 0.85rem; border-collapse: collapse; }
+  .check-table td { padding: 3px 9px; text-align: left; }
+  .check-table tr.ok { color: var(--good); }
+  .check-table tr.fail { color: var(--bad); }
+  .tut-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; }
+  .panel .tut-nav button { margin-top: 0; }
+  #tutNext:disabled { opacity: 0.35; cursor: default; }
+  #quizBtns button { margin: 8px 6px 0; }
+  #mp {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9;
+  }
+  #mp.hidden { display: none; }
+  #mpBody {
+    width: min(420px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  #mpBody h2 { color: var(--accent); margin-bottom: 10px; }
+  #mpBody h3 { color: var(--text); margin: 14px 0 4px; font-size: 1rem; }
+  #mpName {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+    text-align: center;
+    margin-top: 6px;
+  }
+  .mp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 6px 0;
+    font-size: 0.95rem;
+  }
+  .mp-row button { margin-top: 0 !important; padding: 6px 14px; }
+  #mpScores {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+  .mp-chip {
+    background: var(--panel);
+    border: 1px solid #334155;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+  }
+  .mp-chip.yo { border-color: var(--accent); }
+  #freezeBanner {
+    position: fixed;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #7f1d1d;
+    color: #fecaca;
+    border: 1px solid #b91c1c;
+    padding: 8px 16px;
+    border-radius: 8px;
+    z-index: 20;
+    font-size: 0.9rem;
+  }
+  #freezeBanner.hidden { display: none; }
+  @media (max-width: 640px) {
+    header { padding: 8px 10px 2px; gap: 8px; }
+    h1 { font-size: 1.1rem; letter-spacing: 1px; }
+    .stats { gap: 10px; }
+    .stat { min-width: 44px; }
+    .stat .value { font-size: 1rem; }
+    .stat label { font-size: 0.55rem; }
+    button.action { padding: 6px 10px; font-size: 0.8rem; }
+    #table { gap: 8px; padding: 8px 8px 16px; }
+    .panel { padding: 26px 22px; max-width: 90vw; }
+    .tut-panel { padding: 16px 12px; }
+    .tut-cards { margin: 10px 0; gap: 8px; }
+    .tut-cards.grid3 { grid-template-columns: repeat(3, 24vw); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Patrones de rayado compartidos por todas las cartas -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <pattern id="st0" patternUnits="userSpaceOnUse" width="5" height="5">
+      <line x1="0" y1="2.5" x2="5" y2="2.5" stroke="#2563eb" stroke-width="1.6"/>
+    </pattern>
+    <pattern id="st1" patternUnits="userSpaceOnUse" width="5" height="5">
+      <line x1="0" y1="2.5" x2="5" y2="2.5" stroke="#ea580c" stroke-width="1.6"/>
+    </pattern>
+    <pattern id="st2" patternUnits="userSpaceOnUse" width="5" height="5">
+      <line x1="0" y1="2.5" x2="5" y2="2.5" stroke="#16a34a" stroke-width="1.6"/>
+    </pattern>
+  </defs>
+</svg>
+
+<header>
+  <h1>TERNA</h1>
+  <div class="stats">
+    <div class="stat"><span class="value" id="score">0</span><label>Puntos</label></div>
+    <div class="stat"><span class="value" id="potential">100</span><label>En juego</label></div>
+    <div class="stat"><span class="value" id="found">0</span><label>Ternas</label></div>
+    <div class="stat"><span class="value" id="deckCount">69</span><label>Mazo</label></div>
+    <div class="stat"><span class="value" id="clock">0:00</span><label>Tiempo</label></div>
+  </div>
+  <button class="action" id="hintBtn">💡 Pista (−25)</button>
+  <div id="mpScores"></div>
+</header>
+<div id="freezeBanner" class="hidden"></div>
+
+<main id="table"></main>
+<div id="toast"></div>
+
+<div id="overlay">
+  <div class="panel" id="panelContent">
+    <h2>TERNA</h2>
+    <p>Encontrá grupos de 3 cartas donde cada atributo<br>(cantidad, forma, color y relleno) sea<br><strong>todo igual o todo distinto</strong>.</p>
+    <div class="rules">
+      • Cuanto más rápido encuentres cada terna, más puntos ganás (100 máx., 20 mín.).<br>
+      • Error: −10 puntos. Pista: −25 puntos.<br>
+      • El juego termina cuando se acaba el mazo y no quedan ternas.
+    </div>
+    <div class="panel-buttons">
+      <button id="startBtn">Jugar</button>
+      <button class="action" id="mpBtn">Multijugador</button>
+      <button class="action" id="tutBtn">¿Cómo se juega?</button>
+    </div>
+  </div>
+</div>
+
+<div id="mp" class="hidden">
+  <div class="panel" id="mpBody"></div>
+</div>
+
+<div id="tutorial" class="hidden">
+  <div class="panel tut-panel">
+    <div id="tutProgress"></div>
+    <h2 id="tutTitle"></h2>
+    <div id="tutBody"></div>
+    <div class="tut-nav">
+      <button class="action" id="tutPrev">← Atrás</button>
+      <button class="action" id="tutExit">Salir</button>
+      <button id="tutNext">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#2563eb', '#ea580c', '#16a34a'];
+const MAX_PTS = 100, MIN_PTS = 20, DECAY = 2;       // puntos por terna según tiempo
+const PENALTY_MISS = 10, PENALTY_HINT = 25;
+
+let deck = [], deckPos = 0, table = [];
+let score = 0, found = 0, startTime = 0, lastFound = 0;
+let sel = [], locked = false, gameOver = true, timerId = null;
+
+// Cada carta: [cantidad, forma, color, relleno], valores 0..2
+function makeDeck() {
+  const d = [];
+  for (let i = 0; i < 81; i++) {
+    d.push([i % 3, Math.floor(i / 3) % 3, Math.floor(i / 9) % 3, Math.floor(i / 27) % 3]);
+  }
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+function isTerna(a, b, c) {
+  for (let k = 0; k < 4; k++) {
+    if ((a[k] + b[k] + c[k]) % 3 !== 0) return false;
+  }
+  return true;
+}
+
+function findTerna(cards) {
+  for (let i = 0; i < cards.length; i++)
+    for (let j = i + 1; j < cards.length; j++)
+      for (let k = j + 1; k < cards.length; k++)
+        if (isTerna(cards[i], cards[j], cards[k])) return [i, j, k];
+  return null;
+}
+
+function shapeSVG(shape, colorIdx, fill) {
+  const color = COLORS[colorIdx];
+  let fillAttr;
+  if (fill === 0) fillAttr = 'none';
+  else if (fill === 1) fillAttr = `url(#st${colorIdx})`;
+  else fillAttr = color;
+  const style = `fill="${fillAttr}" stroke="${color}" stroke-width="3"`;
+  if (shape === 0) return `<circle r="16" ${style}/>`;
+  if (shape === 1) return `<polygon points="0,-17 17,13 -17,13" stroke-linejoin="round" ${style}/>`;
+  return `<rect x="-15" y="-15" width="30" height="30" rx="4" ${style}/>`;
+}
+
+function cardSVG(card) {
+  const [count, shape, color, fill] = card;
+  const yPositions = [[75], [50, 100], [35, 75, 115]][count];
+  const symbols = yPositions
+    .map(y => `<g transform="translate(50,${y})">${shapeSVG(shape, color, fill)}</g>`)
+    .join('');
+  return `<svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">${symbols}</svg>`;
+}
+
+// Dimensiona las cartas para que todo el tablero entre en pantalla sin scroll:
+// 3 columnas en vertical (celular), 3 filas en horizontal (escritorio)
+function layoutTable() {
+  const el = document.getElementById('table');
+  const n = Math.max(table.length, 12);
+  const portrait = window.innerHeight > window.innerWidth;
+  const cols = portrait ? 3 : Math.ceil(n / 3);
+  const rows = Math.ceil(n / cols);
+  const cs = getComputedStyle(el);
+  const gap = parseFloat(cs.rowGap) || 12;
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const headerH = document.querySelector('header').offsetHeight;
+  const availW = window.innerWidth - padX;
+  const availH = window.innerHeight - headerH - padY;
+  const byWidth = (availW - gap * (cols - 1)) / cols;
+  const byHeight = ((availH - gap * (rows - 1)) / rows) * 2 / 3;
+  const w = Math.floor(Math.max(48, Math.min(130, byWidth, byHeight)));
+  el.style.gridTemplateColumns = `repeat(${cols}, ${w}px)`;
+  el.style.setProperty('--card-w', w + 'px');
+}
+
+function renderTable() {
+  const el = document.getElementById('table');
+  layoutTable();
+  el.innerHTML = '';
+  table.forEach((card, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'card' + (sel.includes(idx) ? ' selected' : '');
+    btn.innerHTML = cardSVG(card);
+    btn.onclick = () => onCardClick(idx);
+    el.appendChild(btn);
+  });
+  document.getElementById('deckCount').textContent = deck.length - deckPos;
+}
+
+function draw(n) {
+  const out = deck.slice(deckPos, deckPos + n);
+  deckPos += n;
+  return out;
+}
+
+// Garantiza que haya al menos una terna en mesa (agrega de a 3 si hace falta)
+function ensureTerna() {
+  let added = false;
+  while (!findTerna(table) && deckPos < deck.length) {
+    table.push(...draw(3));
+    added = true;
+  }
+  if (added) toast('No había terna: se agregaron 3 cartas');
+  if (!findTerna(table)) endGame();
+}
+
+function onCardClick(idx) {
+  if (mpMode) { mpCardClick(idx); return; }
+  if (locked || gameOver) return;
+  const pos = sel.indexOf(idx);
+  if (pos >= 0) sel.splice(pos, 1);
+  else if (sel.length < 3) sel.push(idx);
+  renderTable();
+  if (sel.length === 3) checkSelection();
+}
+
+function checkSelection() {
+  locked = true;
+  const cardEls = document.getElementById('table').children;
+  const [a, b, c] = sel;
+  if (isTerna(table[a], table[b], table[c])) {
+    const secs = (Date.now() - lastFound) / 1000;
+    const pts = Math.max(MIN_PTS, Math.round(MAX_PTS - DECAY * secs));
+    score += pts;
+    found++;
+    lastFound = Date.now();
+    sel.forEach(i => cardEls[i].classList.add('good'));
+    toast(`¡Terna! +${pts} puntos`);
+    setTimeout(() => {
+      const removeIdx = [...sel].sort((x, y) => y - x);
+      if (table.length > 12 || deckPos >= deck.length) {
+        removeIdx.forEach(i => table.splice(i, 1));
+      } else {
+        sel.forEach(i => { table[i] = draw(1)[0]; });
+      }
+      sel = [];
+      locked = false;
+      updateStats();
+      renderTable();
+      ensureTerna();
+      renderTable();
+    }, 450);
+  } else {
+    score = Math.max(0, score - PENALTY_MISS);
+    sel.forEach(i => cardEls[i].classList.add('bad'));
+    toast(`No es terna (−${PENALTY_MISS}): ${failText(table[a], table[b], table[c])}`, 3500);
+    setTimeout(() => {
+      sel = [];
+      locked = false;
+      updateStats();
+      renderTable();
+    }, 500);
+  }
+  updateStats();
+}
+
+function hint() {
+  if (gameOver || locked) return;
+  const t = findTerna(table);
+  if (!t) return;
+  score = Math.max(0, score - PENALTY_HINT);
+  updateStats();
+  const cardEls = document.getElementById('table').children;
+  cardEls[t[0]].classList.add('hint');
+  setTimeout(() => renderTable(), 1800);
+}
+
+function updateStats() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('found').textContent = found;
+}
+
+function tick() {
+  if (gameOver) return;
+  const total = Math.floor((Date.now() - startTime) / 1000);
+  document.getElementById('clock').textContent =
+    `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  const secs = (Date.now() - lastFound) / 1000;
+  document.getElementById('potential').textContent =
+    Math.max(MIN_PTS, Math.round(MAX_PTS - DECAY * secs));
+}
+
+function toast(msg, ms = 2000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function endGame() {
+  gameOver = true;
+  clearInterval(timerId);
+  const total = Math.floor((Date.now() - startTime) / 1000);
+  const mins = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  document.getElementById('panelContent').innerHTML = `
+    <h2>¡Fin del juego!</h2>
+    <div class="big">${score} puntos</div>
+    <p>Ternas encontradas: <strong>${found}</strong></p>
+    <p>Tiempo total: <strong>${mins}</strong></p>
+    <div class="panel-buttons">
+      <button onclick="init()">Jugar otra vez</button>
+      <button class="action" onclick="openTutorial()">¿Cómo se juega?</button>
+    </div>`;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function init() {
+  deck = makeDeck();
+  deckPos = 0;
+  table = draw(12);
+  score = 0; found = 0; sel = []; locked = false; gameOver = false;
+  startTime = Date.now(); lastFound = Date.now();
+  document.getElementById('overlay').classList.add('hidden');
+  updateStats();
+  renderTable();
+  ensureTerna();
+  renderTable();
+  clearInterval(timerId);
+  timerId = setInterval(tick, 250);
+}
+
+// ---------- Tutorial ----------
+const ATTR_NAMES = ['Cantidad', 'Forma', 'Color', 'Relleno'];
+const VALUE_NAMES = [
+  ['1', '2', '3'],
+  ['círculo', 'triángulo', 'cuadrado'],
+  ['azul', 'naranja', 'verde'],
+  ['contorno', 'rayado', 'sólido']
+];
+
+function failText(a, b, c) {
+  for (let k = 0; k < 4; k++) {
+    if ((a[k] + b[k] + c[k]) % 3 !== 0) {
+      const names = [a, b, c].map(card => VALUE_NAMES[k][card[k]]);
+      return `${ATTR_NAMES[k].toLowerCase()} (${names.join(', ')}) no es ni todo igual ni todo distinto`;
+    }
+  }
+  return '';
+}
+
+function checklistHTML(cards) {
+  let rows = '';
+  for (let k = 0; k < 4; k++) {
+    const vals = cards.map(c => c[k]);
+    const allSame = vals[0] === vals[1] && vals[1] === vals[2];
+    const allDiff = vals[0] !== vals[1] && vals[1] !== vals[2] && vals[0] !== vals[2];
+    const names = vals.map(v => VALUE_NAMES[k][v]).join(', ');
+    const verdict = allSame ? 'todas iguales ✓' : allDiff ? 'todas distintas ✓' : 'no coincide ✗';
+    rows += `<tr class="${allSame || allDiff ? 'ok' : 'fail'}"><td><strong>${ATTR_NAMES[k]}</strong></td><td>${names}</td><td>${verdict}</td></tr>`;
+  }
+  return `<table class="check-table">${rows}</table>`;
+}
+
+// Cartas fijas elegidas a mano; los ejercicios tienen exactamente UNA terna
+// (verificado con _check_tutorial.py)
+const TUT = {
+  attrCard: [1, 1, 1, 1],
+  valid:   [[1, 0, 0, 0], [1, 1, 0, 1], [1, 2, 0, 2]],
+  invalid: [[1, 0, 0, 0], [1, 1, 0, 1], [1, 2, 1, 2]],
+  quiz:    [[0, 1, 0, 2], [0, 1, 1, 2], [0, 1, 2, 2]],
+  find6:   [[0, 1, 1, 0], [1, 0, 0, 2], [1, 2, 2, 0], [0, 0, 0, 2], [2, 1, 2, 0], [2, 0, 0, 2]],
+  find9:   [[2, 2, 2, 2], [1, 1, 2, 2], [0, 1, 2, 1], [0, 1, 1, 2], [1, 0, 0, 1],
+            [2, 2, 0, 0], [1, 1, 1, 0], [1, 1, 1, 1], [0, 0, 0, 0]]
+};
+
+function tutCardsHTML(cards, opts = {}) {
+  const cls = 'tut-card' + (opts.clickable ? ' clickable' : '');
+  const wrap = 'tut-cards' + (opts.grid ? ' grid3' : '');
+  return `<div class="${wrap}">` +
+    cards.map(c => `<button class="${cls}" tabindex="${opts.clickable ? 0 : -1}">${cardSVG(c)}</button>`).join('') +
+    '</div>';
+}
+
+let tutStep = 0;
+
+const tutSteps = [
+  { title: 'Las cartas', render: el => {
+      el.innerHTML = `
+        <p class="tut-text">Cada carta tiene <strong>4 atributos</strong>, y cada atributo puede tomar 3 valores. Por ejemplo:</p>
+        ${tutCardsHTML([TUT.attrCard])}
+        <div class="attr-list">
+          <strong>Cantidad:</strong> 1, 2 o 3 figuras → esta tiene <strong>2</strong><br>
+          <strong>Forma:</strong> círculo, triángulo o cuadrado → <strong>triángulo</strong><br>
+          <strong>Color:</strong> azul, naranja o verde → <strong>naranja</strong><br>
+          <strong>Relleno:</strong> contorno, rayado o sólido → <strong>rayado</strong>
+        </div>`;
+    } },
+  { title: 'Una terna válida', render: el => {
+      el.innerHTML = `
+        <p class="tut-text">Una <strong>terna</strong> son 3 cartas donde cada atributo, mirado por separado, es <strong>todo igual o todo distinto</strong> en las tres.</p>
+        ${tutCardsHTML(TUT.valid)}
+        ${checklistHTML(TUT.valid)}
+        <p class="tut-text">Los 4 atributos cumplen la regla → ¡es terna!</p>`;
+    } },
+  { title: 'Cuando NO es terna', render: el => {
+      el.innerHTML = `
+        <p class="tut-text">Cambiamos una sola carta del ejemplo anterior:</p>
+        ${tutCardsHTML(TUT.invalid)}
+        ${checklistHTML(TUT.invalid)}
+        <p class="tut-text">El color falla: dos azules y una naranja. Basta que <strong>un solo atributo</strong> no cumpla para que no sea terna.</p>`;
+    } },
+  { title: '¿Son terna?', interactive: true, render: renderQuiz },
+  { title: 'Encontrá la terna', interactive: true, render: el =>
+      renderFind(el, TUT.find6, 'Acá hay 6 cartas y <strong>exactamente una</strong> terna escondida. Tocá las 3 cartas que la forman. Si te trabás, usá la pista.') },
+  { title: 'Ahora más difícil', interactive: true, render: el =>
+      renderFind(el, TUT.find9, 'Las ternas más difíciles de ver son las de <strong>todo distinto en todo</strong>. Acá hay 9 cartas y una sola terna… y es de esas.') },
+  { title: 'El puntaje', render: el => {
+      el.innerHTML = `
+        <p class="tut-text">¡Ya sabés jugar! Solo falta saber cómo se gana:</p>
+        <div class="attr-list">
+          ⚡ Cada terna vale <strong>hasta ${MAX_PTS} puntos</strong>: cuanto más rápido, más vale (mínimo ${MIN_PTS}).<br>
+          ❌ Equivocarse resta <strong>${PENALTY_MISS}</strong> puntos.<br>
+          💡 Pedir pista resta <strong>${PENALTY_HINT}</strong>.<br>
+          🃏 Si no hay terna en mesa, se agregan 3 cartas solas.<br>
+          🏁 El juego termina al acabarse el mazo.
+        </div>`;
+    } }
+];
+
+function renderQuiz(el) {
+  const cards = TUT.quiz;
+  el.innerHTML = `
+    <p class="tut-text">Ahora vos: repasá los 4 atributos de estas cartas. ¿Forman una terna?</p>
+    ${tutCardsHTML(cards)}
+    <div id="quizBtns">
+      <button id="qYes">Sí, son terna</button>
+      <button class="action" id="qNo">No</button>
+    </div>
+    <div id="quizFb"></div>`;
+  const answer = yes => {
+    document.getElementById('quizBtns').remove();
+    document.getElementById('quizFb').innerHTML =
+      (yes ? '<p class="tut-text"><strong style="color:var(--good)">¡Exacto!</strong> Es una terna:</p>'
+           : '<p class="tut-text"><strong style="color:var(--bad)">¡Sí era terna!</strong> Mirá el repaso:</p>')
+      + checklistHTML(cards);
+    tutEnableNext();
+  };
+  document.getElementById('qYes').onclick = () => answer(true);
+  document.getElementById('qNo').onclick = () => answer(false);
+}
+
+function renderFind(el, cards, intro) {
+  el.innerHTML = `
+    <p class="tut-text">${intro}</p>
+    ${tutCardsHTML(cards, { clickable: true, grid: true })}
+    <div id="findFb"></div>
+    <button class="action" id="tutHintBtn">💡 Pista (gratis)</button>`;
+  const btns = [...el.querySelectorAll('.tut-card')];
+  const fb = el.querySelector('#findFb');
+  const answer = findTerna(cards);
+  let sel = [], done = false;
+  el.querySelector('#tutHintBtn').onclick = () => {
+    if (!done) btns[answer[0]].classList.add('hint');
+  };
+  btns.forEach((btn, i) => btn.onclick = () => {
+    if (done) return;
+    const p = sel.indexOf(i);
+    if (p >= 0) { sel.splice(p, 1); btn.classList.remove('selected'); }
+    else if (sel.length < 3) { sel.push(i); btn.classList.add('selected'); }
+    if (sel.length < 3) return;
+    const picked = sel.map(j => cards[j]);
+    if (isTerna(...picked)) {
+      done = true;
+      sel.forEach(j => { btns[j].classList.remove('selected'); btns[j].classList.add('good'); });
+      fb.innerHTML = '<p class="tut-text"><strong style="color:var(--good)">¡Correcto!</strong></p>' + checklistHTML(picked);
+      el.querySelector('#tutHintBtn').remove();
+      tutEnableNext();
+    } else {
+      const wrong = [...sel];
+      sel = [];
+      wrong.forEach(j => btns[j].classList.add('bad'));
+      fb.innerHTML = `<p class="tut-text"><strong style="color:var(--bad)">Todavía no:</strong> ${failText(...picked)}.</p>` + checklistHTML(picked);
+      setTimeout(() => wrong.forEach(j => btns[j].classList.remove('bad', 'selected')), 900);
+    }
+    fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+function tutEnableNext() { document.getElementById('tutNext').disabled = false; }
+
+function showTutStep() {
+  const s = tutSteps[tutStep];
+  document.getElementById('tutProgress').textContent = `Paso ${tutStep + 1} de ${tutSteps.length}`;
+  document.getElementById('tutTitle').textContent = s.title;
+  s.render(document.getElementById('tutBody'));
+  document.getElementById('tutPrev').style.visibility = tutStep === 0 ? 'hidden' : 'visible';
+  const next = document.getElementById('tutNext');
+  next.disabled = !!s.interactive;
+  next.textContent = tutStep === tutSteps.length - 1 ? '¡A jugar!' : 'Siguiente →';
+}
+
+function openTutorial() {
+  tutStep = 0;
+  document.getElementById('tutorial').classList.remove('hidden');
+  showTutStep();
+}
+
+document.getElementById('tutBtn').onclick = openTutorial;
+document.getElementById('tutPrev').onclick = () => { tutStep--; showTutStep(); };
+document.getElementById('tutExit').onclick = () => document.getElementById('tutorial').classList.add('hidden');
+document.getElementById('tutNext').onclick = () => {
+  if (tutStep === tutSteps.length - 1) {
+    document.getElementById('tutorial').classList.add('hidden');
+    init();
+  } else {
+    tutStep++;
+    showTutStep();
+  }
+};
+
+// ---------- Multijugador ----------
+// El servidor (server.py) es la autoridad: acá solo se dibuja lo que manda
+// y se le avisa lo que el jugador hace.
+let mpWS = null, mpId = null, mpMode = false;
+let mpFrozenUntil = 0, mpFreezeTimer = null;
+const START_PANEL_HTML = document.getElementById('panelContent').innerHTML;
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function mpSend(d) {
+  if (mpWS && mpWS.readyState === 1) mpWS.send(JSON.stringify(d));
+}
+
+function mpShow(html) {
+  document.getElementById('mpBody').innerHTML = html;
+  document.getElementById('mp').classList.remove('hidden');
+}
+
+function mpOpen() {
+  const guardado = localStorage.getItem('terna_nombre') || '';
+  mpShow(`
+    <h2>Multijugador</h2>
+    <p class="tut-text">Elegí un nombre para entrar al lobby:</p>
+    <input id="mpName" maxlength="15" value="${esc(guardado)}" placeholder="Tu nombre">
+    <div class="panel-buttons">
+      <button id="mpEnter">Entrar</button>
+      <button class="action" id="mpCancel">Volver</button>
+    </div>`);
+  const entrar = () => {
+    const nombre = document.getElementById('mpName').value.trim();
+    if (!nombre) return;
+    localStorage.setItem('terna_nombre', nombre);
+    mpConnect(nombre);
+  };
+  document.getElementById('mpEnter').onclick = entrar;
+  document.getElementById('mpName').onkeydown = e => { if (e.key === 'Enter') entrar(); };
+  document.getElementById('mpCancel').onclick = () => document.getElementById('mp').classList.add('hidden');
+}
+
+function mpConnect(nombre) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  try {
+    mpWS = new WebSocket(`${proto}://${location.host}/ws`);
+  } catch (e) {
+    toast('No se pudo conectar al servidor', 3000);
+    return;
+  }
+  mpWS.onopen = () => mpSend({ type: 'hola', nombre });
+  mpWS.onmessage = e => mpMessage(JSON.parse(e.data));
+  mpWS.onerror = () => toast('No se pudo conectar (¿está corriendo server.py?)', 4000);
+  mpWS.onclose = () => {
+    if (mpMode || !document.getElementById('mp').classList.contains('hidden')) {
+      toast('Se perdió la conexión con el servidor', 3500);
+      mpReset();
+    }
+  };
+}
+
+function mpMessage(d) {
+  if (d.type === 'bienvenida') mpId = d.id;
+  else if (d.type === 'lobby') mpRenderLobby(d);
+  else if (d.type === 'mesa') mpRenderMesa(d);
+  else if (d.type === 'estado') mpEstado(d);
+  else if (d.type === 'aviso') toast(d.msg, 2500);
+  else if (d.type === 'congelado') mpFreeze(d.segundos);
+  else if (d.type === 'fin') mpFin(d);
+  else if (d.type === 'error') toast(d.msg, 3000);
+}
+
+function mpRenderLobby(d) {
+  if (mpMode) return;   // estoy jugando: el lobby no me interesa
+  mpGameUI(false);
+  const mesas = d.mesas.length
+    ? d.mesas.map(m => `
+        <div class="mp-row">
+          <span>Mesa de ${esc(m.anfitrion)} (${m.cantidad}/${m.maximo})${m.estado === 'jugando' ? ' · jugando' : ''}</span>
+          ${m.estado === 'esperando' ? `<button onclick="mpSend({type:'unirse', mesa:'${m.id}'})">Unirse</button>` : ''}
+        </div>`).join('')
+    : '<p class="tut-text">No hay mesas abiertas todavía. ¡Creá la primera!</p>';
+  mpShow(`
+    <h2>Lobby</h2>
+    <p class="tut-text">Conectados: ${d.jugadores.map(esc).join(', ') || 'solo vos'}</p>
+    <h3>Mesas</h3>
+    ${mesas}
+    <div class="panel-buttons">
+      <button onclick="mpSend({type:'crear'})">Crear mesa</button>
+      <button class="action" onclick="mpQuit()">Salir</button>
+    </div>`);
+}
+
+function mpRenderMesa(d) {
+  if (d.estado === 'jugando') return;   // el juego llega por mensajes 'estado'
+  const lista = d.jugadores.map(x =>
+    `<div class="mp-row"><span>${esc(x.nombre)}${x.id === d.anfitrion ? ' 👑' : ''}${x.id === mpId ? ' (vos)' : ''}</span></div>`).join('');
+  const soyHost = d.anfitrion === mpId;
+  mpShow(`
+    <h2>Mesa armada</h2>
+    <p class="tut-text">Jugadores (${d.jugadores.length}/${d.maximo}):</p>
+    ${lista}
+    <p class="tut-text">${soyHost
+      ? 'Cuando estén todos, dale comienzo. El primero en marcar cada terna se la lleva: 3 cartas, 3 puntos.'
+      : 'Esperando a que el anfitrión dé comienzo…'}</p>
+    <div class="panel-buttons">
+      ${soyHost ? `<button onclick="mpSend({type:'empezar'})">Empezar</button>` : ''}
+      <button class="action" onclick="mpSend({type:'salir'})">Salir de la mesa</button>
+    </div>`);
+}
+
+function mpEstado(d) {
+  if (d.estado === 'jugando' && !mpMode) mpGameUI(true);
+  if (d.msg) toast(d.msg, 2500);
+  if (!mpMode) return;
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('mp').classList.add('hidden');
+  table = d.cartas;
+  sel = [];
+  mpRenderScores(d);
+  renderTable();
+}
+
+function mpGameUI(activo) {
+  mpMode = activo;
+  if (activo) {
+    gameOver = true;            // apaga la lógica single-player
+    clearInterval(timerId);
+    document.querySelector('.stats').style.display = 'none';
+    document.getElementById('hintBtn').style.display = 'none';
+    document.getElementById('mpScores').style.display = 'flex';
+  } else {
+    document.querySelector('.stats').style.display = '';
+    document.getElementById('hintBtn').style.display = '';
+    document.getElementById('mpScores').style.display = 'none';
+    document.getElementById('freezeBanner').classList.add('hidden');
+    clearInterval(mpFreezeTimer);
+    mpFrozenUntil = 0;
+  }
+}
+
+function mpRenderScores(d) {
+  document.getElementById('mpScores').innerHTML =
+    d.jugadores.map(x =>
+      `<span class="mp-chip${x.id === mpId ? ' yo' : ''}">${esc(x.nombre)}: <strong>${x.puntos}</strong></span>`).join('')
+    + `<span class="mp-chip">🂠 ${d.mazo}</span>`;
+}
+
+function mpCardClick(idx) {
+  if (Date.now() < mpFrozenUntil) return;
+  const p = sel.indexOf(idx);
+  if (p >= 0) sel.splice(p, 1);
+  else if (sel.length < 3) sel.push(idx);
+  renderTable();
+  if (sel.length === 3) {
+    // Se mandan índices Y valores: si otro se llevó esas cartas un instante
+    // antes, el servidor descarta el reclamo en vez de congelar injustamente.
+    mpSend({ type: 'reclamo', cartas: sel, valores: sel.map(i => table[i]) });
+    sel = [];   // el servidor decide; la respuesta llega por 'estado' o 'congelado'
+  }
+}
+
+function mpFreeze(segundos) {
+  mpFrozenUntil = Date.now() + segundos * 1000;
+  sel = [];
+  renderTable();
+  const banner = document.getElementById('freezeBanner');
+  banner.classList.remove('hidden');
+  clearInterval(mpFreezeTimer);
+  mpFreezeTimer = setInterval(() => {
+    const resta = Math.ceil((mpFrozenUntil - Date.now()) / 1000);
+    if (resta <= 0) {
+      banner.classList.add('hidden');
+      clearInterval(mpFreezeTimer);
+    } else {
+      banner.textContent = `❄️ Terna incorrecta: congelado ${resta} s`;
+    }
+  }, 100);
+}
+
+function mpFin(d) {
+  const filas = d.ranking.map((x, i) =>
+    `<p>${i === 0 ? '🏆' : (i + 1) + '°'} ${esc(x.nombre)}: <strong>${x.puntos}</strong> ${x.puntos === 1 ? 'carta' : 'cartas'}</p>`).join('');
+  const soyHost = d.anfitrion === mpId;
+  document.getElementById('panelContent').innerHTML = `
+    <h2>¡Fin de la partida!</h2>
+    ${filas}
+    <div class="panel-buttons">
+      ${soyHost ? `<button onclick="mpSend({type:'empezar'})">Revancha</button>`
+                : '<p class="tut-text">El anfitrión puede pedir revancha…</p>'}
+      <button class="action" onclick="mpBackToLobby()">Salir al lobby</button>
+    </div>`;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function mpBackToLobby() {
+  mpGameUI(false);
+  mpRestoreStartPanel();
+  mpSend({ type: 'salir' });   // el servidor responde con el lobby
+}
+
+function mpRestoreStartPanel() {
+  const panel = document.getElementById('panelContent');
+  panel.innerHTML = START_PANEL_HTML;
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('startBtn').onclick = init;
+  document.getElementById('tutBtn').onclick = openTutorial;
+  document.getElementById('mpBtn').onclick = mpOpen;
+}
+
+function mpQuit() {
+  if (mpWS) { mpWS.onclose = null; mpWS.close(); mpWS = null; }
+  mpReset();
+}
+
+function mpReset() {
+  mpWS = null;
+  mpGameUI(false);
+  document.getElementById('mp').classList.add('hidden');
+  mpRestoreStartPanel();
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+document.getElementById('hintBtn').onclick = hint;
+document.getElementById('startBtn').onclick = init;
+document.getElementById('mpBtn').onclick = mpOpen;
+window.addEventListener('resize', layoutTable);
+window.addEventListener('orientationchange', layoutTable);
+</script>
+</body>
+</html>
